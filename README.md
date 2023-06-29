@@ -6,16 +6,32 @@
 1. If you want to update rules, run yara_updater.py.
 2. yara_scan will look for 'compiled_rules.bin' in current working directory if none is specified in provided arguments.
 3. yara_scan can operate against individual files, single directories or recursively against a directory tree
-   1. Single File Usage: yara_scan.py <target_file>
-   2. Directory (Non-Recursive): yara_scan.py <target_dir>
-   3. Directory (Recursive): yara_scan.py <target_dir> -recursive
+   1. Single File Usage: yara_scan.py -target <target_file>
+   2. Directory (Non-Recursive): yara_scan.py -target <target_dir>
+   3. Directory (Recursive): yara_scan.py -target <target_dir> -recursive
 4. If you want a report output on top of console output, add "-report <json|csv>" to specify a format and "-out <file_path>", otherwise a report is generated in the current working directory.
 
 ## Arguments
 ```
--recursive : Recursively scan directory if target is a directory.
--report : Generate an output report in either CSV or JSON format.
--out : Specify a file path for the generated report.
+ --target : Target File/Directory
+ --recursive : Recursively scan directory if target is a directory.
+ --report : Generate an output report in either CSV or JSON format.
+ --out : Specify a file path for the generated report.
+ --rules : Specify path to compiled rules file.
+ --extensions : Specify which file-extensions to scan - defaults to {DEFAULT_EXTENSIONS}.
+ --maxsize : Specify the maximum file size to scan in rounded Megabytes - defaults to {DEFAULT_MAX_FILE_MB}
+```
+
+## Example Usage
+```
+ yaracheck.py --target <Target_File>
+ yaracheck.py --target <Target_Directory>
+ yaracheck.py --target <Target_Directory> --recursive
+ yaracheck.py --target <Target_Directory> --report csv
+ yaracheck.py --target <Target_Directory> --report json
+ yaracheck.py --target <Target_Directory> --recursive --report json --out <Report_File>
+ yaracheck.py --target <Target_File> --extensions exe,bat
+ yaracheck.py --target <Target_File> --rules <Rules_File>
 ```
 
 ## Rules Pulled from Following Locations
