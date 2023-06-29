@@ -12,6 +12,7 @@ DEFAULT_RULE_FILE = 'compiled_rules.bin'
 DEFAULT_EXTENSIONS = ['exe', 'scr', 'lnk', 'hta', 'doc', 'xls', 'pdf', 'vbs', 'rtf', 'js', 'jar', 'cpl', 'crt', 'ins',
                       'isp', 'ade', 'adp', 'ldb', 'mad', 'mda', 'mdb', 'mdz', 'snp', 'bas', 'mde', 'mst', 'docm',
                       'dotm', 'xlsm', 'xltm', 'xlam', 'pptm', 'potm', 'ps1', 'vba', 'psm1', 'bat', 'dll']
+DEFAULT_MAX_FILE_MB = 10
 
 
 def parse_args():
@@ -35,6 +36,7 @@ def parse_args():
     --out : Specify a file path for the generated report.
     --rules : Specify path to compiled rules file.
     --extensions : Specify which file-extensions to scan - defaults to {DEFAULT_EXTENSIONS}.
+    --maxsize : Specify the maximum file size to scan in rounded Megabytes - defaults to {DEFAULT_MAX_FILE_MB}
     ''')
     parser.add_argument("-r", "--report", help="Specify a report type for saving data - json,csv.", required=False, nargs=1, type=str)
     parser.add_argument("-o", "--out", help="Specify the custom file path where reporting should be stored.", required=False, nargs=1, type=str)
@@ -42,6 +44,7 @@ def parse_args():
     parser.add_argument("-re", "--recursive", help="Enable recursive directory scanning.", required=False, action="store_true")
     parser.add_argument("-ru", "--rules", help="Path to compiled YARA rules file.", required=False, nargs=1, type=str)
     parser.add_argument("-ext", "--extensions", help="Comma-Delimited list of extensions to scan for.", required=False, nargs=1, type=str)
+    parser.add_argument("-m", "--maxsize", help="Max file size to scan in rounded Megabytes", required=False, nargs=1, type=int)
     args = parser.parse_args()
 
     target = args.target[0]
@@ -55,8 +58,12 @@ def parse_args():
         'json_report': False,
         'output_path': f'yaracheck_report_{target}_{current_time}'.replace(':','_').replace("\\","_"),
         'rules_file': DEFAULT_RULE_FILE,
-        'extensions': DEFAULT_EXTENSIONS
+        'extensions': DEFAULT_EXTENSIONS,
+        'max_size' : DEFAULT_MAX_FILE_MB
     }
+    if args.maxsize:
+        max_size = args.maxsize[0]
+        arguments['max_size'] = max_size
     if args.extensions:
         extensions = args.extensions
         if ',' in extensions:
@@ -104,6 +111,7 @@ def parse_args():
     try:
         with open(arguments['output_path'], 'w') as f:
             pass
+        os.remove(arguments['output_path'])
     except OSError:
         print(f"[!] Error Creating Report at Specified Location: {arguments['output_path']}")
         print(traceback.format_exc())
@@ -147,7 +155,12 @@ def scan_file(rules, file, arguments):
     :param arguments:
     :return:
     '''
+    # Skip files that do not have extensions in the allow list
     if not os.path.splitext(file)[1][1:] in arguments['extensions']:
+        return
+    # Skip files greater than the allowed max file size
+    file_size = os.path.getsize(file)/1024 ** 2
+    if file_size > arguments['max_size']:
         return
     print(f"[+] Scanning: {file}")
     try:
@@ -156,12 +169,16 @@ def scan_file(rules, file, arguments):
     except yara.Error:
         print(f"[!] Error Scanning: {file}")
         return
-    if len(matches) == 0:
+    match_count = len(matches)
+    if match_count == 0:
         return
     rules = ''
+    count = 0
     for match in matches:
         rules += match.rule
-        rules += ", "
+        count += 1
+        if count < match_count:
+            rules += ", "
     print(f"[!] Rule Matches: {rules}")
     if arguments['csv_report']:
         data = f"{file},\""
@@ -190,12 +207,12 @@ def scan_directory(rules, arguments):
     :return:
     '''
     if arguments['recursive']:
-        print(f"[+] Recursively Scanning: {arguments['target']}")
+        print(f"[+] Recursively Scanning Directory: {arguments['target']}")
         for root, dirs, files in os.walk(arguments['target']):
             for file in files:
                 scan_file(rules, os.path.join(root, file), arguments)
     else:
-        print(f"[+] Scanning: {arguments['target']}")
+        print(f"[+] Scanning Directory: {arguments['target']}")
         files = os.listdir(arguments['target'])
         for file in files:
             scan_file(rules, arguments['target']+"\\"+file, arguments)
