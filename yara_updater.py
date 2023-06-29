@@ -4,10 +4,12 @@ import requests
 import shutil
 import zipfile
 import traceback
-import sys
 
 # TODO - Inefficient right now because we are cloning entire repos and then extracting and scanning for rules -
 #  the alternative is cloning specific folders from a repo or scanning for files individually which results in significantly more API requests.
+
+# GitHub rate limit for Anonymous requests to their API is 60/hour.
+# Authenticated users with a valid token increase this to 1000 per hour per repository.
 
 ZIP_URLS = {
     "Daily IOC": 'https://api.github.com/repos/StrangerealIntel/DailyIOC/zipball/master',
